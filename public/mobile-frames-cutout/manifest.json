@@ -1,0 +1,10 @@
+{
+  "frameCount": 121,
+  "prefix": "/mobile-frames-cutout/frame_",
+  "extension": "png",
+  "pad": 4,
+  "width": 1440,
+  "height": 1440,
+  "fps": 24,
+  "source": "/mobile.mp4"
+}

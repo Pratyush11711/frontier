@@ -1,0 +1,10 @@
+{
+  "frameCount": 193,
+  "prefix": "/trust-frames/frame_",
+  "extension": "png",
+  "pad": 4,
+  "width": 960,
+  "height": 960,
+  "fps": 24,
+  "source": "/trust.mp4"
+}

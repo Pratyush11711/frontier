@@ -1,0 +1,10 @@
+{
+  "frameCount": 96,
+  "prefix": "/hf-frames-cutout/frame_",
+  "extension": "png",
+  "pad": 4,
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "source": "/hf_20260617_133306_b3662c80-5071-43d4-acdb-cbb844603872.mp4"
+}
