@@ -34,6 +34,12 @@ function getFrameConfig(variant: HeroFrameVariant) {
 /** Frames per second for the autoplay loop before the user scrolls. */
 const AUTOPLAY_FPS = 24;
 
+/**
+ * How quickly the displayed frame eases toward the scroll-mapped target,
+ * per RAF tick. 1 = instant snap (old behavior), lower = smoother/laggier.
+ */
+const SCROLL_LERP_FACTOR = 0.18;
+
 export function HeroScrollSequence({
   scrollProgress,
   className,
@@ -47,8 +53,10 @@ export function HeroScrollSequence({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<ScrollSequenceRenderer | null>(null);
 
-  // Scroll-linked frame index (set via motion value event).
-  const frameIndexRef = useRef(0);
+  // Scroll-linked target frame (set via motion value event) and the
+  // smoothed/eased frame actually displayed, which chases the target.
+  const targetFrameRef = useRef(0);
+  const smoothedFrameRef = useRef(0);
   const lastRenderedFrameRef = useRef(-1);
   const rafRef = useRef(0);
 
@@ -63,10 +71,13 @@ export function HeroScrollSequence({
     if (!scrollLinked) return;
 
     const maxIndex = frameSequence.frameCount - 1;
-    frameIndexRef.current = Math.round(Math.max(0, Math.min(1, value)) * maxIndex);
+    targetFrameRef.current = Math.max(0, Math.min(1, value)) * maxIndex;
 
     if (value > 0 && autoplayActiveRef.current) {
       autoplayActiveRef.current = false;
+      // Start the smoothing chase from wherever autoplay currently is,
+      // rather than snapping, so the handoff itself is seamless.
+      smoothedFrameRef.current = autoplayFrameRef.current;
     }
   });
 
@@ -117,8 +128,17 @@ export function HeroScrollSequence({
           }
           nextFrame = Math.floor(autoplayFrameRef.current);
         } else {
-          // Scroll-linked: snap directly to the mapped frame.
-          nextFrame = frameIndexRef.current;
+          // Scroll-linked: ease the displayed frame toward the scroll
+          // target instead of snapping, so fast/jittery swipes feel smooth.
+          smoothedFrameRef.current +=
+            (targetFrameRef.current - smoothedFrameRef.current) * SCROLL_LERP_FACTOR;
+
+          // Snap once close enough to avoid an infinite asymptotic crawl.
+          if (Math.abs(targetFrameRef.current - smoothedFrameRef.current) < 0.05) {
+            smoothedFrameRef.current = targetFrameRef.current;
+          }
+
+          nextFrame = Math.round(smoothedFrameRef.current);
         }
 
         if (nextFrame !== lastRenderedFrameRef.current) {
