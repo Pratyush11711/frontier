@@ -54,7 +54,7 @@ function FeatureBox({
       animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0.7, y: 10 }}
       transition={{ duration: 0.5, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "glass relative flex aspect-[3/2] w-full flex-col overflow-hidden rounded-2xl border bg-gradient-to-b sm:aspect-[6/5] sm:rounded-[1.75rem]",
+        "glass relative flex h-[24svh] w-full flex-col overflow-hidden rounded-2xl border bg-gradient-to-b sm:aspect-[6/5] sm:h-auto sm:rounded-[1.75rem]",
         theme.boxBorder,
         theme.boxTint,
       )}
@@ -62,8 +62,8 @@ function FeatureBox({
       {/* Stage reserved for a future per-feature animation */}
       <div className="relative flex-1" data-animation-stage={index} />
 
-      <div className="relative shrink-0 border-t border-white/10 px-3 py-2.5 sm:px-6 sm:py-5">
-        <h3 className="type-h3 text-balance text-[0.9rem] leading-snug text-white sm:text-[1.35rem] sm:leading-snug">
+      <div className="relative shrink-0 border-t border-white/10 px-4 py-3 sm:px-6 sm:py-5">
+        <h3 className="type-h3 text-balance text-[1.05rem] leading-snug text-white sm:text-[1.35rem] sm:leading-snug">
           {title}
         </h3>
       </div>
@@ -114,21 +114,21 @@ function ChapterCard({ chapter, index, totalChapters, scrollYProgress, isActive 
       style={{ y, scale, zIndex: index, transformOrigin: "top center" }}
     >
       <article
-        className="relative flex h-auto max-h-[calc(100svh+16rem)] w-full max-w-[1600px] flex-col overflow-y-auto overscroll-contain rounded-[1.5rem] border border-white/12 shadow-2xl sm:max-h-[min(96vh,1040px)] sm:h-[min(96vh,1040px)] sm:overflow-hidden sm:rounded-[2.5rem] lg:rounded-[3rem]"
+        className="relative flex h-auto max-h-[calc(100svh-1rem)] w-full max-w-[1600px] flex-col overflow-hidden rounded-[1.5rem] border border-white/12 shadow-2xl sm:max-h-[min(96vh,1040px)] sm:h-[min(96vh,1040px)] sm:rounded-[2.5rem] lg:rounded-[3rem]"
         style={{ background: theme.gradient }}
       >
-        <div className="relative z-10 flex h-full min-h-0 w-full flex-col items-center justify-center px-4 py-6 sm:px-10 sm:py-10 lg:px-16 lg:py-12">
-          <header className="mb-5 w-full max-w-3xl shrink-0 text-center sm:mb-10">
+        <div className="relative z-10 flex h-full min-h-0 w-full flex-col items-center justify-center px-4 py-3 sm:px-10 sm:py-10 lg:px-16 lg:py-12">
+          <header className="mb-4 w-full max-w-3xl shrink-0 text-center sm:mb-10">
             <div className="flex flex-col items-center gap-2 sm:gap-4">
               <span
                 className={cn(
-                  "glass-ios-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12 sm:rounded-2xl",
+                  "glass-ios-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12 sm:rounded-2xl",
                   theme.icon,
                 )}
               >
                 <DuotoneIcon name={chapter.icon} className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
               </span>
-              <h2 className="type-editorial-28 text-balance text-[1.4rem] leading-tight text-white sm:text-[2.75rem] sm:leading-[1.05] lg:text-[3.25rem]">
+              <h2 className="type-editorial-28 text-balance text-[1.5rem] leading-tight text-white sm:text-[2.75rem] sm:leading-[1.05] lg:text-[3.25rem]">
                 {chapter.title}
               </h2>
             </div>
@@ -182,7 +182,7 @@ export function StorySection() {
       className="relative scroll-mt-28 bg-deep-teal"
       style={{ height: `${totalChapters * 100}svh` }}
     >
-      <div className="sticky top-0 left-0 flex h-[100svh] w-full items-start justify-center overflow-y-auto overflow-x-hidden sm:items-center sm:overflow-hidden">
+      <div className="sticky top-0 left-0 flex h-[100svh] w-full items-start justify-center overflow-hidden sm:items-center">
         {storySections.map((chapter, index) => (
           <ChapterCard
             key={chapter.id}
