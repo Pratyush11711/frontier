@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import type { MotionValue } from "framer-motion";
+import { useMotionValueEvent, type MotionValue } from "framer-motion";
 import { getHeroFramePaths, heroFrameSequence } from "@/lib/heroFrames";
 import { getMobileFramePaths, mobileFrameSequence } from "@/lib/mobileFrames";
 import { ScrollSequenceRenderer } from "@/lib/webgl/scrollSequence";
@@ -10,10 +10,9 @@ import { cn } from "@/lib/utils";
 export type HeroFrameVariant = "desktop" | "mobile";
 
 interface HeroScrollSequenceProps {
-  /** Unused now that playback is autoplay-only; kept so callers don't need updating. */
-  scrollProgress?: MotionValue<number>;
+  scrollProgress: MotionValue<number>;
   className?: string;
-  /** Unused now that playback is autoplay-only; kept so callers don't need updating. */
+  /** When false, frames autoplay only (used for the mobile panel below copy). */
   scrollLinked?: boolean;
   /** Desktop uses laptop frames; mobile uses mobile.mp4 cutouts only. */
   variant?: HeroFrameVariant;
@@ -32,11 +31,13 @@ function getFrameConfig(variant: HeroFrameVariant) {
   };
 }
 
-/** Frames per second for the continuous autoplay loop. */
+/** Frames per second for the autoplay loop before the user scrolls. */
 const AUTOPLAY_FPS = 24;
 
 export function HeroScrollSequence({
+  scrollProgress,
   className,
+  scrollLinked = true,
   variant = "desktop",
 }: HeroScrollSequenceProps) {
   const { sequence: frameSequence, paths: framePaths } = useMemo(
@@ -46,13 +47,28 @@ export function HeroScrollSequence({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<ScrollSequenceRenderer | null>(null);
 
+  // Scroll-linked frame index (set via motion value event).
+  const frameIndexRef = useRef(0);
   const lastRenderedFrameRef = useRef(-1);
   const rafRef = useRef(0);
 
+  // Autoplay state — disabled the moment the user begins scrolling.
+  const autoplayActiveRef = useRef(true);
   // Fractional frame counter so autoplay advances smoothly between integers.
   const autoplayFrameRef = useRef(0);
   // Timestamp of the previous RAF tick, used to compute delta-time.
   const lastTimestampRef = useRef<number | null>(null);
+
+  useMotionValueEvent(scrollProgress, "change", (value) => {
+    if (!scrollLinked) return;
+
+    const maxIndex = frameSequence.frameCount - 1;
+    frameIndexRef.current = Math.round(Math.max(0, Math.min(1, value)) * maxIndex);
+
+    if (value > 0 && autoplayActiveRef.current) {
+      autoplayActiveRef.current = false;
+    }
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -85,18 +101,25 @@ export function HeroScrollSequence({
       const renderer = rendererRef.current;
 
       if (!disposed && renderer?.ready) {
-        // Delta-time advance so the loop is frame-rate independent.
-        if (lastTimestampRef.current === null) lastTimestampRef.current = timestamp;
-        const delta = timestamp - lastTimestampRef.current;
-        lastTimestampRef.current = timestamp;
+        let nextFrame: number;
 
-        const maxIndex = frameSequence.frameCount - 1;
-        autoplayFrameRef.current += (delta / 1000) * AUTOPLAY_FPS;
-        // Wrap around for a seamless loop.
-        if (autoplayFrameRef.current > maxIndex) {
-          autoplayFrameRef.current = autoplayFrameRef.current % (maxIndex + 1);
+        if (autoplayActiveRef.current) {
+          // Delta-time advance so the loop is frame-rate independent.
+          if (lastTimestampRef.current === null) lastTimestampRef.current = timestamp;
+          const delta = timestamp - lastTimestampRef.current;
+          lastTimestampRef.current = timestamp;
+
+          const maxIndex = frameSequence.frameCount - 1;
+          autoplayFrameRef.current += (delta / 1000) * AUTOPLAY_FPS;
+          // Wrap around for a seamless loop.
+          if (autoplayFrameRef.current > maxIndex) {
+            autoplayFrameRef.current = autoplayFrameRef.current % (maxIndex + 1);
+          }
+          nextFrame = Math.floor(autoplayFrameRef.current);
+        } else {
+          // Scroll-linked: snap directly to the mapped frame.
+          nextFrame = frameIndexRef.current;
         }
-        const nextFrame = Math.floor(autoplayFrameRef.current);
 
         if (nextFrame !== lastRenderedFrameRef.current) {
           if (renderer.setFrame(nextFrame)) {
@@ -122,7 +145,7 @@ export function HeroScrollSequence({
       rendererRef.current?.destroy();
       rendererRef.current = null;
     };
-  }, [variant, frameSequence, framePaths]);
+  }, [scrollLinked, variant, frameSequence, framePaths]);
 
   return (
     <canvas

@@ -132,14 +132,23 @@ function FAQHeader({
   </span>
 )}
       {splitLayout ? (
-        <h2
+         <h2
     className={cn(
       "type-editorial-60 max-w-md text-balance leading-[1.06] sm:max-w-xl lg:max-w-2xl",
       isDark ? "text-white [text-shadow:0_2px_32px_rgba(1,26,36,0.55)]" : "text-cloud",
     )}
   >
-    <span className="block underline underline-offset-7 decoration-2">{headingLine1}</span>
-    <span className="block underline underline-offset-7 decoration-2">{headingLine2}</span>
+    <span className="block">{headingLine1}</span>
+    <span className="relative inline-block w-full pb-2">
+      {headingLine2}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-x-0 bottom-0 h-[1px]",
+          isDark ? "bg-white" : "bg-cloud",
+        )}
+      />
+    </span>
   </h2>
       ) : (
         <h2
