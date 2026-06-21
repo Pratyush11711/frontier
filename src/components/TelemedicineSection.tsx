@@ -46,10 +46,13 @@ function ConvergingLine({
 function ConvergingLines({ progress }: { progress: MotionValue<number> }) {
   // Phase A [0, 0.45]: lines sit still, apart, fully visible.
   // Phase B [0.45, 0.75]: lines sweep toward the shared merge line.
-  // Phase C [0.75, 1]: merged single line extends fully across.
+  // Phase C [0.75, 1]: a single solid line originates exactly at the merge
+  // point (72, MERGE_Y) and travels rightward to the section's edge.
   const mergeProgress = useTransform(progress, [0.45, 0.75], [0, 1]);
-  const extendProgress = useTransform(progress, [0.75, 1], [0, 1]);
-  const extendOpacity = useTransform(mergeProgress, [0.85, 1], [0, 1]);
+  const travelProgress = useTransform(progress, [0.75, 1], [0, 1]);
+  const mergeX = 72;
+  const travelX2 = useTransform(travelProgress, [0, 1], [mergeX, 100]);
+  const travelOpacity = useTransform(mergeProgress, [0.85, 1], [0, 1]);
 
   return (
     <svg
@@ -62,16 +65,19 @@ function ConvergingLines({ progress }: { progress: MotionValue<number> }) {
         <ConvergingLine key={index} startY={startY} mergeProgress={mergeProgress} />
       ))}
 
-      {/* Single continuation line, drawing outward from the merge point once converged. */}
+      {/* Single continuous line, originating exactly at the merge point and
+          travelling rightward. x1 is fixed at the merge point; only x2 grows,
+          so the line is always solid (no dasharray involved) and its start
+          never moves. */}
       <motion.line
-        x1={72}
+        x1={mergeX}
         y1={MERGE_Y}
-        x2={100}
+        x2={travelX2}
         y2={MERGE_Y}
         stroke="rgba(127, 219, 218, 0.85)"
         strokeWidth={0.22}
         vectorEffect="non-scaling-stroke"
-        style={{ pathLength: extendProgress, opacity: extendOpacity }}
+        style={{ opacity: travelOpacity }}
       />
     </svg>
   );
