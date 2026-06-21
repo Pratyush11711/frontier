@@ -1,104 +1,123 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import {
-  motion,
-  useMotionValueEvent,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-} from "framer-motion";
+import { useRef } from "react";
+import { motion, useScroll, useTransform, type MotionValue } from "framer-motion";
 import { telemedicineSection } from "@/lib/content";
 import { brandGradients } from "@/lib/brandGradients";
 import { blurReveal, staggerSlow, defaultViewport } from "@/lib/motion";
+import { cn } from "@/lib/utils";
 
-const PANEL_COUNT = telemedicineSection.points.length;
-const PANEL_WIDTH_VW = 44;
-const PANEL_GAP_VW = 2;
+const STEP_COUNT = telemedicineSection.points.length;
 
-const CARD_SHELL_BG = [
-  "bg-[#1a4a54]",
-  "bg-[#1d4550]",
-  "bg-[#204a55]",
-  "bg-[#234f5a]",
-] as const;
+/**
+ * Vertical Y-position (in viewBox units, 0-100) each separate line sits at
+ * before converging, and the shared Y-position they merge into.
+ * NOTE: array length must stay in sync with telemedicineSection.points.
+ */
+const LINE_START_Y = [18, 39, 61, 82];
+const MERGE_Y = 50;
 
-function PanelVideo({ src, isActive }: { src: string; isActive: boolean }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const prefersReducedMotion = useReducedMotion();
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (isActive && !prefersReducedMotion) {
-      void video.play().catch(() => {});
-      return;
-    }
-
-    video.pause();
-  }, [isActive, prefersReducedMotion, src]);
+function ConvergingLine({
+  startY,
+  mergeProgress,
+}: {
+  startY: number;
+  mergeProgress: MotionValue<number>;
+}) {
+  const y = useTransform(mergeProgress, [0, 1], [startY, MERGE_Y]);
+  const d = useTransform(y, (value) => {
+    const startX = 0;
+    const bendX = 58;
+    const endX = 72;
+    return `M ${startX} ${startY} L ${bendX} ${startY} Q ${endX} ${startY} ${endX} ${value} L ${endX} ${value}`;
+  });
 
   return (
-    <video
-      ref={videoRef}
-      loop
-      muted
-      playsInline
-      preload="metadata"
-      aria-hidden
-      className="absolute inset-0 h-full w-full object-cover object-center"
-      src={src}
+    <motion.path
+      d={d}
+      fill="none"
+      stroke="rgba(127, 219, 218, 0.55)"
+      strokeWidth={0.18}
+      vectorEffect="non-scaling-stroke"
     />
+  );
+}
+
+function ConvergingLines({ progress }: { progress: MotionValue<number> }) {
+  // Phase A [0, 0.45]: lines sit still, apart, fully visible.
+  // Phase B [0.45, 0.75]: lines sweep toward the shared merge line.
+  // Phase C [0.75, 1]: merged single line extends fully across.
+  const mergeProgress = useTransform(progress, [0.45, 0.75], [0, 1]);
+  const extendProgress = useTransform(progress, [0.75, 1], [0, 1]);
+  const extendOpacity = useTransform(mergeProgress, [0.85, 1], [0, 1]);
+
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      className="absolute inset-0 h-full w-full"
+    >
+      {LINE_START_Y.map((startY, index) => (
+        <ConvergingLine key={index} startY={startY} mergeProgress={mergeProgress} />
+      ))}
+
+      {/* Single continuation line, drawing outward from the merge point once converged. */}
+      <motion.line
+        x1={72}
+        y1={MERGE_Y}
+        x2={100}
+        y2={MERGE_Y}
+        stroke="rgba(127, 219, 218, 0.85)"
+        strokeWidth={0.22}
+        vectorEffect="non-scaling-stroke"
+        style={{ pathLength: extendProgress, opacity: extendOpacity }}
+      />
+    </svg>
+  );
+}
+
+function StepRow({
+  index,
+  title,
+  text,
+  progress,
+}: {
+  index: number;
+  title: string;
+  text: string;
+  progress: MotionValue<number>;
+}) {
+  const start = (index / STEP_COUNT) * 0.4;
+  const end = start + 0.4 / STEP_COUNT + 0.08;
+  const opacity = useTransform(progress, [start, end], [0.25, 1]);
+  const y = useTransform(progress, [start, end], [16, 0]);
+
+  return (
+    <motion.div
+      style={{ opacity, y }}
+      className={cn(
+        "flex flex-col gap-1 text-left sm:flex-row sm:items-baseline sm:gap-5",
+        index % 2 === 1 && "sm:flex-row-reverse sm:text-right",
+      )}
+    >
+      <span className="type-mono-data shrink-0 text-aqua-300/70">
+        {String(index + 1).padStart(2, "0")}
+      </span>
+      <div className="flex flex-col gap-1">
+        <h3 className="type-h3 text-balance text-white">{title}</h3>
+        <p className="type-body-s max-w-md text-pretty text-white/70">{text}</p>
+      </div>
+    </motion.div>
   );
 }
 
 export function TelemedicineSection() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [maxScrollPx, setMaxScrollPx] = useState(0);
-  const [activeIndices, setActiveIndices] = useState<number[]>([0, 1]);
-
-  useLayoutEffect(() => {
-    const measure = () => {
-      const track = trackRef.current;
-      const viewport = viewportRef.current;
-      if (!track || !viewport) return;
-
-      setMaxScrollPx(Math.max(0, track.scrollWidth - viewport.clientWidth));
-    };
-
-    measure();
-
-    const observer = new ResizeObserver(measure);
-    if (trackRef.current) observer.observe(trackRef.current);
-    if (viewportRef.current) observer.observe(viewportRef.current);
-
-    window.addEventListener("resize", measure);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, []);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end end"],
-  });
-
-  const x = useTransform(scrollYProgress, [0, 1], [0, -maxScrollPx]);
-
-  useMotionValueEvent(scrollYProgress, "change", (progress) => {
-    const showLastPair = maxScrollPx > 0 ? progress >= 0.85 : false;
-    const indices = showLastPair
-      ? [PANEL_COUNT - 2, PANEL_COUNT - 1]
-      : [0, 1];
-    setActiveIndices((prev) =>
-      prev.length === indices.length && prev.every((value, i) => value === indices[i])
-        ? prev
-        : indices,
-    );
   });
 
   return (
@@ -113,13 +132,9 @@ export function TelemedicineSection() {
         style={{ background: brandGradients.pacificDeep }}
       />
 
-      <div
-        ref={containerRef}
-        className="relative"
-        style={{ height: `calc(100vh + ${maxScrollPx}px)` }}
-      >
-        <div className="sticky top-0 left-0 z-10 flex h-screen w-full flex-col overflow-hidden">
-          <div className="relative mx-auto w-full max-w-container shrink-0 px-3 pt-14 pb-5 sm:px-4 sm:pt-16 sm:pb-6 lg:px-5">
+      <div ref={containerRef} className="relative h-[320svh] sm:h-[280svh]">
+        <div className="sticky top-0 left-0 flex h-screen w-full flex-col overflow-hidden">
+          <div className="relative z-10 mx-auto w-full max-w-container shrink-0 px-3 pt-14 pb-5 sm:px-4 sm:pt-16 sm:pb-6 lg:px-5">
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -139,43 +154,22 @@ export function TelemedicineSection() {
             </motion.div>
           </div>
 
-          <div
-            ref={viewportRef}
-            className="flex min-h-0 flex-1 items-center overflow-hidden pb-6 sm:pb-8"
-          >
-            <motion.div
-              ref={trackRef}
-              className="flex w-max items-stretch will-change-transform"
-              style={{
-                x,
-                gap: `${PANEL_GAP_VW}vw`,
-                paddingLeft: "3vw",
-                paddingRight: "3vw",
-              }}
-            >
-              {telemedicineSection.points.map((point, index) => (
-                <article
-                  key={point.title}
-                  className={`flex max-w-[480px] shrink-0 flex-col rounded-[2.5rem] p-4 sm:rounded-[3rem] sm:p-5 ${CARD_SHELL_BG[index] ?? CARD_SHELL_BG[0]}`}
-                  style={{ width: `${PANEL_WIDTH_VW}vw` }}
-                >
-                  <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-[1.5rem] bg-[#011a24] sm:rounded-[1.75rem]">
-                    <PanelVideo
-                      src={point.video}
-                      isActive={activeIndices.includes(index)}
-                    />
-                  </div>
+          {/* Background convergence art */}
+          <div className="absolute inset-x-0 bottom-0 top-[28%] sm:top-[24%]">
+            <ConvergingLines progress={scrollYProgress} />
+          </div>
 
-                  <div className="flex flex-1 flex-col items-center justify-center px-2 py-5 text-center sm:py-6">
-                    <span className="type-mono-data text-aqua-300/60">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <h3 className="type-h3 mt-2 text-balance text-white">{point.title}</h3>
-                    <p className="type-body-s mt-2 text-pretty text-white/75">{point.text}</p>
-                  </div>
-                </article>
-              ))}
-            </motion.div>
+          {/* Step list, revealed as part of the same scroll-pinned phase */}
+          <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center gap-7 px-5 sm:gap-9 sm:px-8 lg:px-10">
+            {telemedicineSection.points.map((point, index) => (
+              <StepRow
+                key={point.title}
+                index={index}
+                title={point.title}
+                text={point.text}
+                progress={scrollYProgress}
+              />
+            ))}
           </div>
         </div>
       </div>

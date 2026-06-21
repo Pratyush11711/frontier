@@ -85,6 +85,7 @@ export function FinalCTA() {
             <CTASection
               badge={{ text: finalCta.badge }}
               title={finalCta.heading} // Title unchanged
+              titleClassName="type-editorial-60 max-w-3xl text-[2.25rem] sm:text-[3.25rem] lg:text-[4rem] leading-[1.05]"
               description={
                 <ScrollWordReveal
                   text={finalCta.supporting}

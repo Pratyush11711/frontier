@@ -139,15 +139,8 @@ function FAQHeader({
     )}
   >
     <span className="block">{headingLine1}</span>
-    <span className="relative inline-block w-full pb-2">
+    <span className="relative underline underline-offset-7 decoration-2  inline-block w-full pb-2">
       {headingLine2}
-      <span
-        aria-hidden
-        className={cn(
-          "absolute inset-x-0 bottom-0 h-[1px]",
-          isDark ? "bg-white" : "bg-cloud",
-        )}
-      />
     </span>
   </h2>
       ) : (
